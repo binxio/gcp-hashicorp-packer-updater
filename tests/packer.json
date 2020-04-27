@@ -1,0 +1,33 @@
+{
+  "builders": [
+    {
+      "image_family": "ubuntu-1804",
+      "image_labels": {
+        "created": "{{ timestamp }}",
+        "track": "docker"
+      },
+      "image_name": "ubuntu-1804-lts-docker",
+      "project_id": "{{user `project_id`}}",
+      "source_image": "ubuntu-1804-bionic-v20200414",
+      "source_image_family": "ubuntu-1804-lts",
+      "source_image_project_id": "ubuntu-os-cloud",
+      "ssh_username": "root",
+      "type": "googlecompute",
+      "zone": "europe-west4-c"
+    }
+  ],
+  "provisioners": [
+    {
+      "destination": "/tmp/resources",
+      "source": "resources",
+      "type": "file"
+    },
+    {
+      "script": "bootstrap.sh",
+      "type": "shell"
+    }
+  ],
+  "variables": {
+    "project_id": ""
+  }
+}
