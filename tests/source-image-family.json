@@ -1,0 +1,13 @@
+{
+  "builders": [
+    {
+      "image_name": "packer-v{{timestamp}}",
+      "image_family": "packer",
+      "project_id": "speeltuin-mvanholsteijn",
+      "source_image_family": "ubuntu-1804-lts",
+      "type": "googlecompute",
+      "ssh_username": "ubuntu",
+      "zone": "europe-west4-a"
+    }
+  ]
+}

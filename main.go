@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/binxio/gcloudconfig"
+	"golang.org/x/oauth2/google"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -11,8 +14,14 @@ import (
 	"log"
 )
 
-func updatePackerDefinition(filename string) error {
-	content, err := ioutil.ReadFile(filename)
+type PackerUpdater struct {
+	ctx         context.Context
+	credentials *google.Credentials
+	filename    string
+}
+
+func (updater *PackerUpdater) SourceImageDefinition() error {
+	content, err := ioutil.ReadFile(updater.filename)
 	if err != nil {
 		return err
 	}
@@ -40,23 +49,29 @@ func updatePackerDefinition(filename string) error {
 
 				}
 				if gceBuilder.Type == "googlecompute" {
-					updated, err := gceBuilder.updateGoogleSourceImage()
+					updated, err := gceBuilder.updateGoogleSourceImage(updater.ctx, updater.credentials)
 					if err != nil {
 						return err
 					}
 					if updated {
 						builder["source_image"] = gceBuilder.Image
-						builder["source_image_family"] = gceBuilder.Family
-						builder["source_image_project_id"] = gceBuilder.ProjectId
+						if gceBuilder.Family != "" {
+							builder["source_image_family"] = gceBuilder.Family
+						}
+						if gceBuilder.ProjectId != "" {
+							builder["source_image_project_id"] = gceBuilder.ProjectId
+						}
+					} else {
+						log.Printf("builder[%d] image %s is up to date", i, gceBuilder.Image)
 					}
 					dirty = dirty || updated
 				}
 			default:
-				return fmt.Errorf("builder[%d] in %s is not an object", i, filename)
+				return fmt.Errorf("builder[%d] in %s is not an object", i, updater.filename)
 			}
 		}
 	default:
-		return fmt.Errorf("builders in %s is not an array of objects", filename)
+		return fmt.Errorf("builders in %s is not an array of objects", updater.filename)
 	}
 
 	if dirty {
@@ -64,16 +79,43 @@ func updatePackerDefinition(filename string) error {
 		if err != nil {
 			fmt.Errorf("failed to marshal updated file to json, %s\n", err)
 		}
-		ioutil.WriteFile(filename, x, os.FileMode(0660))
+		ioutil.WriteFile(updater.filename, x, os.FileMode(0660))
 	}
 	return nil
 }
 
 func main() {
-	var filename = flag.String("filename", "packer.json", "of the packer file to update")
+	updater := PackerUpdater{ctx: context.Background()}
 
+	var err error
+	var project string
+	useDefaultCredentials := flag.Bool("use-default-credentials", false, "for Google authentication")
+	flag.StringVar(&updater.filename, "filename", "packer.json", "of the packer file to update")
+	flag.StringVar(&project, "project", "", "to use ")
+	configuration := flag.String("configuration", "", "of gcloud to use")
 	flag.Parse()
-	err := updatePackerDefinition(*filename)
+
+	if *useDefaultCredentials {
+		if *configuration != "" {
+			log.Fatalf("-use-default-credentials and -configuration are mutual exclusive")
+		}
+		updater.credentials, err = google.FindDefaultCredentials(updater.ctx)
+	} else {
+		updater.credentials, err = gcloudconfig.GetCredentials(*configuration)
+	}
+
+	if project != "" {
+		updater.credentials.ProjectID = project
+	}
+
+	if updater.credentials.ProjectID == "" {
+		log.Fatalf("no project specified and no default project set")
+	}
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = updater.SourceImageDefinition()
 	if err != nil {
 		log.Fatal(err)
 	}

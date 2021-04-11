@@ -1,0 +1,10 @@
+{
+  "builders": [
+    {
+      "project_id": "my-project",
+      "source_image": "packer-v20200101",
+      "source_family": "packer",
+      "type": "googlecompute"
+    }
+  ]
+}

@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"golang.org/x/oauth2/google"
+	"io/ioutil"
 	"log"
 	"regexp"
 	"sort"
@@ -20,11 +22,20 @@ type GoogleComputeBuilder struct {
 	ProjectId   string `json:"source_image_project_id"`
 }
 
-func (builder *GoogleComputeBuilder) updateGoogleSourceImage() (bool, error) {
+func (builder *GoogleComputeBuilder) updateGoogleSourceImage(ctx context.Context, credentials *google.Credentials) (bool, error) {
 	updated := false
 
-	ctx := context.Background()
-	credentials := getCredentials(ctx, builder.AccountFile)
+	if builder.AccountFile != "" {
+		content, err := ioutil.ReadFile(builder.AccountFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		credentials, err = google.CredentialsFromJSON(ctx, content)
+		if err != nil {
+			return false, err
+		}
+	}
+
 	computeService, err := compute.NewService(ctx, option.WithCredentials(credentials))
 	if err != nil {
 		return false, err
@@ -41,48 +52,73 @@ func (builder *GoogleComputeBuilder) updateGoogleSourceImage() (bool, error) {
 
 	// determine project for builder
 	project := builder.ProjectId
-	if project == "" {
-		if builder.Family != "" {
-			if p := PublicProjects.FindProjectForName(builder.Family); p != nil {
-				project = p.Project
-			}
-		} else if name != "" {
-			if p := PublicProjects.FindProjectForName(name); p != nil {
-				project = p.Project
-			}
-		} else {
-			project = credentials.ProjectID
+	if project == "" && builder.Family != "" {
+		if p := PublicProjects.FindProjectForName(builder.Family); p != nil {
+			project = p.Project
 		}
+	}
+	if project == "" && name != "" {
+		if p := PublicProjects.FindProjectForName(name); p != nil {
+			project = p.Project
+		}
+	}
+	if project == "" {
+		project = credentials.ProjectID
 	}
 
 	// find latest image of the same name
 	var list *compute.ImageList
+	namePattern := ".*"
+	familyPattern := ".*"
+
 	if name != "" {
-		list, err = computeService.Images.List(project).Filter(fmt.Sprintf("name eq \"%s.*\"", name)).Do()
-		if err != nil || len(list.Items) == 0 {
-			return false, fmt.Errorf("no images found with name %s in project %s", name, project)
+		namePattern = fmt.Sprintf("%s-v.*", name)
+	}
+	if builder.Family != "" {
+		familyPattern = builder.Family
+	}
+	token := ""
+	images := make([]*compute.Image, 0, 256)
+	for {
+		if token == "" {
+			filter := fmt.Sprintf("(name eq '%s') (family eq '%s')", namePattern, familyPattern)
+			list, err = computeService.Images.List(project).Filter(filter).Do()
+		} else {
+			list, err = computeService.Images.List(project).PageToken(token).Do()
 		}
-	} else {
-		list, err = computeService.Images.List(project).Filter(fmt.Sprintf("family eq ^%s$", builder.Family)).Do()
-		if err != nil || len(list.Items) == 0 {
-			return false, fmt.Errorf("no images found of family %s in project %s", builder.Family, project)
+		if err != nil {
+			return false, fmt.Errorf("failed to query images for name %s and family %s in project %s, %s", namePattern, familyPattern, project, err)
+		}
+		images = append(images, list.Items...)
+		token = list.NextPageToken
+		if token == "" {
+			break
 		}
 	}
 
-	sort.Sort(byCreationTimestamp(list.Items))
-	image := list.Items[0]
+	if len(images) == 0 {
+		return false, fmt.Errorf("no images found with name %s and family %s in project %s\n", namePattern, familyPattern,
+			project)
+	}
+
+	sort.Sort(byCreationTimestamp(images))
+	image := images[0]
 	if builder.Family != "" && builder.Family != image.Family {
 		return false, fmt.Errorf("image %s is of family %s, not %s", image.Name, image.Family, builder.Family)
 	}
 
 	if builder.Image != image.Name {
-		log.Printf("updating image from %s to %s", builder.Image, image.Name)
+		log.Printf("updating image from '%s' to '%s'", builder.Image, image.Name)
 		updated = true
 		builder.Image = image.Name
 	}
 	if updated && builder.Family == "" {
-		log.Printf("setting image family to  %s", image.Family)
+		log.Printf("setting image family to '%s'", image.Family)
 		builder.Family = image.Family
+	}
+	if updated && builder.ProjectId == "" {
+		log.Printf("setting source image project to '%s'", project)
+		builder.ProjectId = project
 	}
 
 	return updated, nil

@@ -1,0 +1,9 @@
+{
+  "builders": [
+    {
+      "project_id": "my-project",
+      "source_image": "ubuntu-1804-bionic-v20210112",
+      "type": "googlecompute"
+    }
+  ]
+}

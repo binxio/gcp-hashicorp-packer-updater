@@ -10,17 +10,18 @@ type PublicImageProject struct {
 type PublicImageProjects []PublicImageProject
 
 var PublicProjects PublicImageProjects = PublicImageProjects{
-	PublicImageProject{"centos-cloud", regexp.MustCompile("^centos.*$")},
+	PublicImageProject{"centos-cloud", regexp.MustCompile("^centos-.*$")},
 	PublicImageProject{"google-containers", regexp.MustCompile("^container-vm.*$")},
-	PublicImageProject{"coreos-cloud", regexp.MustCompile("^coreos*$")},
-	PublicImageProject{"cos-cloud", regexp.MustCompile("^cos.*$")},
-	PublicImageProject{"debian-cloud", regexp.MustCompile("^debian.*$")},
-	PublicImageProject{"rhel-cloud", regexp.MustCompile("^rhel.*$")},
-	PublicImageProject{"suse-cloud", regexp.MustCompile("^sles.*$")},
-	PublicImageProject{"ubuntu-os-cloud", regexp.MustCompile("^ubuntu.*$")},
-	PublicImageProject{"windows-cloud", regexp.MustCompile("^windows.*$")},
+	PublicImageProject{"coreos-cloud", regexp.MustCompile("^coreos-*$")},
+	PublicImageProject{"cos-cloud", regexp.MustCompile("^cos-.*$")},
+	PublicImageProject{"debian-cloud", regexp.MustCompile("^debian-.*$")},
+	PublicImageProject{"rhel-cloud", regexp.MustCompile("^rhel-.*$")},
+	PublicImageProject{"suse-cloud", regexp.MustCompile("^sles-.*$")},
+	PublicImageProject{"ubuntu-os-cloud", regexp.MustCompile("^ubuntu-.*$")},
+	PublicImageProject{"windows-cloud", regexp.MustCompile("^windows-.*$")},
+	PublicImageProject{"windows-sql-cloud", regexp.MustCompile("^sql-.*-win-.*$")},
 	PublicImageProject{"goog-vmruntime-images", regexp.MustCompile("^gae-builder-vm.*$")},
-	PublicImageProject{"opensuse-cloud", regexp.MustCompile("^.*$")}}
+	PublicImageProject{"opensuse-cloud", regexp.MustCompile("^opensuse-.*$")}}
 
 func (m *PublicImageProjects) FindProjectForName(name string) *PublicImageProject {
 	if name == "" {
