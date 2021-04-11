@@ -1,5 +1,5 @@
 ## NAME
-  `gcp-hashicorp-packer-updater(1) -- update google source image versions in Packer templates`
+  gcp-hashicorp-packer-updater(1) -- update google source image versions in Packer templates
 
 ## SYNOPSIS
 
