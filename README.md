@@ -21,7 +21,7 @@ If the `source_image_project_id` is not specified, it to derive this from the fa
 
 The utility assumes that the `source_image` follows the name pattern `.*-v.*`.
 
-When a match is found, the utility will set the following fields, if not set:
+When a match is found, the utility will set or update the following fields:
 
 - source_image
 - source_image_family
