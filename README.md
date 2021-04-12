@@ -23,9 +23,9 @@ The utility assumes that the `source_image` follows the name pattern `.*-v.*`.
 
 When a match is found, the utility will set or update the following fields:
 
-- source_image
-- source_image_family
-- source_image_project_id
+- source\_image
+- source\_image\_family
+- source\_image\_project\_id
 
 ## EXAMPLES
 
@@ -47,7 +47,7 @@ $ gcp-hashicorp-packer-updater -filename tests/source-image.json
 * `-project project`
   to use, if not returned by the configuration or environment.
   
-* `filename path`
+* `-filename path`
   path of the packer template, default ./packer.json
   
 ## CAVEATS
@@ -61,4 +61,4 @@ Mark van Holsteijn
 [binx.io B.V.](https://binx.io)
 
 ## SEE ALSO
-- [How to keep your source image version in a Packer template up-to-date](https://binx.io/blog/2021/04/11/how-to-keep-your-source-image-version-in-a-packer-template-up-to-date/)
+- [How to keep your source image version in a Packer template up-to-date](https://binx.io/blog/2021/04/11/how-to-keep-your-google-packer-source-image-version-up-to-date/)
